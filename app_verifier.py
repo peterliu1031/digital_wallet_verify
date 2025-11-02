@@ -41,28 +41,27 @@ def generate_vp_qrcode():
         'transactionId': result.get('transactionId')
     })
 
-@app.route('/api/poll-verify-result', methods=['GET'])
-def poll_verify_result():
-    transaction_id = request.args.get('transactionId')
-    if not transaction_id:
-        return jsonify({'error': '缺少 transactionId'}), 400
-    url = f"{API_POLL}/{transaction_id}"
+@app.route('/api/generate-vp-qrcode', methods=['GET'])
+def generate_vp_qrcode():
+    nonce = generate_nonce(30)
     headers = {
         'Access-Token': ACCESS_TOKEN,
         'accept': 'application/json'
     }
-    resp = requests.get(url, headers=headers)
-    try:
-        result = resp.json()
-    except Exception:
-        return jsonify({'error': 'API response not JSON', 'raw': resp.text}), 500
-    status = result.get('status', '')
-    success = status in ['completed', 'verified', 'issued']
+    params = {
+        "ref": VERIFIER_REF,
+        "nonce": nonce
+    }
+    resp = requests.get(API_QRCODE, headers=headers, params=params)
+    if not str(resp.status_code).startswith("2"):
+        return jsonify({'error': f'API錯誤: {resp.status_code}, {resp.text}'}), 500
+    result = resp.json()
     return jsonify({
-        'success': success,
-        'status': status,
-        'detail': result
+        'qrcode': result.get('qrcodeImage'),
+        'authUri': result.get('authUri'),
+        'transactionId': result.get('transactionId')
     })
+
 
 @app.route('/', methods=['GET'])
 def serve_index():
