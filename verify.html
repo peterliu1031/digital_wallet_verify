@@ -1,3 +1,4 @@
+<!-- static/index.html - 前端HTML -->
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -37,39 +38,35 @@
     let currentTransactionId = null;
 
     document.getElementById("btnGenerate").addEventListener("click", function () {
-      fetch("/api/generate-vp-qrcode", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({})
-      })
-      .then(res => res.json())
-      .then(result => {
-        if (result.qrcode) {
-          let html = `
-            <div class="alert alert-success text-center mb-3">
-              請將下方QRCode出示給學生，請學生使用數位皮夾App掃描！
-            </div>
-            <div class="qrcode-section">
-              <img src="${result.qrcode}" class="img-fluid" style="max-width:220px;" />
-              <div style="font-size: 0.96rem; color: #666; margin: 12px 0 8px 0;">
-                <a href="${result.authUri}" target="_blank">直接點此啟用數位皮夾App (DeepLink)</a>
+      fetch("/api/generate-vp-qrcode")
+        .then(res => res.json())
+        .then(result => {
+          if (result.qrcode) {
+            let html = `
+              <div class="alert alert-success text-center mb-3">
+                請將下方QRCode出示給學生，請學生使用數位皮夾App掃描！
               </div>
-            </div>
-            <div id="polling-status" class="mt-3 text-secondary text-center" style="font-size:1rem;">
-              等候學生送出憑證...
-            </div>`;
-          document.getElementById("result").innerHTML = html;
-          currentTransactionId = result.transactionId;
-          startPolling();
-        } else {
+              <div class="qrcode-section">
+                <img src="${result.qrcode}" class="img-fluid" style="max-width:220px;" />
+                <div style="font-size: 0.96rem; color: #666; margin: 12px 0 8px 0;">
+                  <a href="${result.authUri}" target="_blank">直接點此啟用數位皮夾App (DeepLink)</a>
+                </div>
+              </div>
+              <div id="polling-status" class="mt-3 text-secondary text-center" style="font-size:1rem;">
+                等候學生送出憑證...
+              </div>`;
+            document.getElementById("result").innerHTML = html;
+            currentTransactionId = result.transactionId;
+            startPolling();
+          } else {
+            document.getElementById("result").innerHTML =
+              `<div class="alert alert-danger text-center">產生QRCode失敗：${result.error || "未知錯誤"}</div>`;
+          }
+        })
+        .catch(() => {
           document.getElementById("result").innerHTML =
-            `<div class="alert alert-danger text-center">產生QRCode失敗：${result.error || "未知錯誤"}</div>`;
-        }
-      })
-      .catch(() => {
-        document.getElementById("result").innerHTML =
-          '<div class="alert alert-danger text-center">伺服器未回應，請檢查後端。</div>';
-      });
+            '<div class="alert alert-danger text-center">伺服器未回應，請檢查後端。</div>';
+        });
     });
 
     function startPolling() {
