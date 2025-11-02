@@ -12,7 +12,7 @@ CORS(app)
 ACCESS_TOKEN = os.getenv("VERIFIER_ACCESS_TOKEN")
 VERIFIER_REF = os.getenv("VERIFIER_REF")
 API_QRCODE = "https://verifier-sandbox.wallet.gov.tw/api/oidvp/qrcode"
-CREDENTIAL_QUERY_BASE = "https://issuer-sandbox.wallet.gov.tw/api/credential/nonce"  # 依照你需求調整
+API_RESULT = "https://verifier-sandbox.wallet.gov.tw/api/oidvp/result"
 
 @app.route('/api/generate-vp-qrcode', methods=['GET'])
 def generate_vp_qrcode():
@@ -42,35 +42,27 @@ def poll_transaction():
     transaction_id = request.args.get('transactionId')
     if not transaction_id:
         return jsonify({'error': '缺少 transactionId'}), 400
-    
-    # 範例：呼叫官方API取得憑證狀態，這邊用你之前的方法簡化示範
-    url = f"{CREDENTIAL_QUERY_BASE}/{transaction_id}"
+
     headers = {
         'Access-Token': ACCESS_TOKEN,
         'accept': 'application/json'
     }
-    try:
-        resp = requests.get(url, headers=headers)
-        result = resp.json()
-        credential = result.get('credential')
-        received = False
-        if credential:
-            parts = credential.split('.')
-            payload = parts[1]
-            padded = payload + '=' * (-len(payload) % 4)
-            import base64, json
-            decoded = json.loads(base64.urlsafe_b64decode(padded.encode()))
-            vc = decoded.get('vc', {})
-            status = vc.get('credentialStatus', {})
-            if status.get('statusListIndex', "0") != "0":
-                received = True
-        return jsonify({'received': received, 'detail': result})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    params = {
+        'transactionId': transaction_id
+    }
+    resp = requests.get(API_RESULT, headers=headers, params=params)
+
+    if resp.status_code == 200:
+        # 使用者已成功上傳資料，驗證通過
+        return jsonify({'received': True, 'data': resp.json()})
+    elif resp.status_code == 400:
+        # 尚未上傳資料，等待中
+        return jsonify({'received': False})
+    else:
+        return jsonify({'error': f'伺服器錯誤: {resp.status_code}'}), resp.status_code
 
 @app.route('/', methods=['GET'])
 def serve_index():
-    import os
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(BASE_DIR, 'verify.html')
 
