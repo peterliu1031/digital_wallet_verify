@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>校園請假憑證 驗證端</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: linear-gradient(135deg, #fffbe6 0%, #f2f9f9 100%);}
+    .verify-card { background: #fff; border-radius: 16px; box-shadow: 0 2px 24px 0 #efc94444; padding:40px; margin-top:30px;}
+    .verify-header { color:#b57913; font-size: 2rem; font-weight:700; text-align:center; margin-bottom:20px;}
+    .qrcode-section { text-align:center; }
+    .btn-primary {background:#b6903e;}
+  </style>
+</head>
+<body>
+  <div class="container" style="max-width:410px;">
+    <div class="verify-card shadow">
+      <div class="verify-header">校園請假憑證 驗證端</div>
+      <form id="vpForm">
+        <div class="mb-3">
+          <label for="vpTemplateId" class="form-label">VP範本ID (可不填)</label>
+          <input type="text" class="form-control" id="vpTemplateId" placeholder="如需指定VP範本">
+        </div>
+        <button type="submit" class="btn btn-primary w-100 mb-3">產生驗證QRCode</button>
+      </form>
+      <div id="result"></div>
+    </div>
+  </div>
+  <script>
+    let pollingInterval = null;
+    let currentTransactionId = null;
+
+    document.getElementById("vpForm").addEventListener("submit", function(event) {
+      event.preventDefault();
+      const vpTemplateId = document.getElementById("vpTemplateId").value;
+      fetch("/api/generate-vp-qrcode", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          vpTemplateId: vpTemplateId
+        })
+      })
+      .then(res => res.json())
+      .then(result => {
+        if(result.qrcode) {
+          let html = `
+            <div class="alert alert-success text-center mb-3">請將下方QRCode出示給學生，請學生使用數位皮夾App掃描！</div>
+            <div class="qrcode-section">
+              <img src="${result.qrcode}" class="img-fluid" style="max-width:220px;" />
+              <div style="font-size:0.96rem; color:#666; margin:12px 0 8px 0;">
+                <a href="${result.authUri}" target="_blank">直接點此啟用數位皮夾App (DeepLink)</a>
+              </div>
+            </div>
+            <div id="polling-status" class="mt-3 text-secondary text-center" style="font-size:1rem;">等候學生送出憑證...</div>
+          `;
+          document.getElementById("result").innerHTML = html;
+          currentTransactionId = result.transactionId;
+          startPolling();
+        } else {
+          document.getElementById("result").innerHTML =
+            '<div class="alert alert-danger text-center">產生QRCode失敗：' + (result.error || '未知錯誤') + '</div>';
+        }
+      })
+      .catch(()=>{
+        document.getElementById("result").innerHTML =
+          '<div class="alert alert-danger text-center">伺服器未回應，請檢查後端。</div>';
+      });
+    });
+
+    function startPolling() {
+      if(pollingInterval) clearInterval(pollingInterval);
+      if(!currentTransactionId) return;
+      pollingInterval = setInterval(() => {
+        fetch(`/api/poll-verify-result?transactionId=${currentTransactionId}`)
+          .then(res => res.json())
+          .then(data => {
+            if(data.success === true) {
+              document.getElementById("result").innerHTML = `
+                <div class="alert alert-success text-center" style="font-size:1.1rem;">
+                  學生已成功送出請假憑證，驗證通過！
+                  <br/>
+                  狀態：${data.status}
+                </div>
+              `;
+              clearInterval(pollingInterval);
+            }
+            else if(data.status === 'expired' || data.status === 'invalid') {
+              document.getElementById("result").innerHTML = `
+                <div class="alert alert-danger text-center">驗證已失效或憑證無效！</div>
+              `;
+              clearInterval(pollingInterval);
+            }
+          })
+          .catch(()=>{});
+      }, 3500);
+    }
+  </script>
+</body>
+</html>
