@@ -1,4 +1,3 @@
-# app.py - Flask 後端程式
 import os
 import random
 import string
@@ -8,7 +7,7 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-app = Flask(__name__, static_folder='static')  # 將靜態檔放 static 資料夾
+app = Flask(__name__)
 CORS(app)
 
 ACCESS_TOKEN = os.getenv("VERIFIER_ACCESS_TOKEN")
@@ -42,7 +41,8 @@ def generate_vp_qrcode():
 
 @app.route('/', methods=['GET'])
 def serve_index():
-    return app.send_static_file('index.html')
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(BASE_DIR, 'index.html')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
