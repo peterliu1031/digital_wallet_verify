@@ -11,9 +11,9 @@ app = Flask(__name__)
 CORS(app)
 
 ACCESS_TOKEN = os.getenv("VERIFIER_ACCESS_TOKEN")
-VERIFIER_REF = os.getenv("VERIFIER_REF")  # 你的 VP 授權服務代碼 ex: 00000000_yes123123
-API_QRCODE = "https://verifier-sandbox.wallet.gov.tw/api/oidvp/transaction"
-API_POLL = "https://verifier-sandbox.wallet.gov.tw/api/oidvp/transaction"
+VERIFIER_REF = os.getenv("VERIFIER_REF")
+API_QRCODE = "https://verifier-sandbox.wallet.gov.tw/api/oidvp/qrcode"
+API_POLL   = "https://verifier-sandbox.wallet.gov.tw/api/oidvp/transaction"
 
 def generate_nonce(length=30):
     chars = string.ascii_letters + string.digits
