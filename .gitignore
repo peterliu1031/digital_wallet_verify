@@ -1,0 +1,10 @@
+.env
+Access Token.txt
+git.txt
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+.vscode/
+.idea/
