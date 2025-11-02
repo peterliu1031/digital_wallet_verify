@@ -93,7 +93,12 @@
             return;
           }
           if(data.received){
-            document.getElementById('polling-status').innerText = '學生已成功送出請假憑證，驗證通過！';
+            // 掃描成功：移除 QR 及按鈕區，僅保留成功訊息
+            document.getElementById('result').innerHTML = `
+              <div class="alert alert-success" style="font-size:1.15rem;">
+                學生掃描並成功送出請假憑證，驗證通過！
+              </div>
+            `;
             clearInterval(pollingTimer);
           } else {
             document.getElementById('polling-status').innerText = '等待學生送出憑證...';
@@ -105,6 +110,28 @@
         });
     }, 3000);
   }
+
+  // 按鈕顯示控制（只保留一次操作機會）
+  document.getElementById('btnGenerate').addEventListener('click', () => {
+    document.getElementById('btnGenerate').disabled = true; // 禁用按鈕，防止重覆產生
+    fetch('/api/generate-vp-qrcode')
+      .then(res => res.json())
+      .then(result => {
+        if(result.error){
+          showError('產生QRCode失敗：' + result.error);
+          document.getElementById('btnGenerate').disabled = false;
+          return;
+        }
+        currentTransactionId = result.transactionId;
+        showQRCode(result.qrcode, result.authUri);
+        startPolling();
+      })
+      .catch(() => {
+        showError('伺服器未回應，請稍後再試。');
+        document.getElementById('btnGenerate').disabled = false;
+      });
+  });
+
 </script>
 </body>
 </html>
