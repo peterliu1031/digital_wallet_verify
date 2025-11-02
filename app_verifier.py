@@ -22,17 +22,16 @@ def generate_nonce(length=30):
 
 @app.route('/api/generate-vp-qrcode', methods=['POST'])
 def generate_vp_qrcode():
+    nonce = generate_nonce(30)  
     headers = {
         'Access-Token': ACCESS_TOKEN,
-        'Content-Type': 'application/json',
         'accept': 'application/json'
     }
-    nonce = generate_nonce(30)  # 產生隨機碼
-    payload = {
-        "ref": VERIFIER_REF,
-        "nonce": nonce
+    params = {
+        'ref': VERIFIER_REF,
+        'nonce': nonce
     }
-    resp = requests.post(API_QRCODE, headers=headers, json=payload)
+    resp = requests.get(API_QRCODE, headers=headers, params=params)
     if not str(resp.status_code).startswith("2"):
         return jsonify({'error': f'API錯誤: {resp.status_code}, {resp.text}'}), 500
     result = resp.json()
