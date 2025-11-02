@@ -42,7 +42,7 @@ def generate_vp_qrcode():
 @app.route('/', methods=['GET'])
 def serve_index():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    return send_from_directory(BASE_DIR, 'index.html')
+    return send_from_directory(BASE_DIR, 'verify.html')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
