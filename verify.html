@@ -563,31 +563,32 @@
         }, 3000);
       }
       // FAQ / 發行紀錄
-      function renderFaq() {
-        document.getElementById("step-content").innerHTML = `
-      <div class="faq-pop active" style="position:static;box-shadow:none;margin-bottom:0;">
-        <b>常見問題 FAQ</b><br>
-        <ul>
-          <li>驗證端用途：查驗學生數位憑證真偽</li>
-          <li>流程：校方出示QR讓學生App掃描，資料雲端自動比對</li>
-          <li>成功會顯示驗證通過，失敗則標誌紅色並警告</li>
-          <li>如憑證被撤銷，系統自動顯示異常提醒</li>
-        </ul>
-        <button class="btn btn-outline-primary btn-sm w-100 mt-1" onclick="tabSwitch('issue')">返回驗證流程</button>
-      </div>`;
-      }
       function renderHistory() {
         document.getElementById("step-content").innerHTML = `
-      <div class="history-meta">
-        <i class="fa-solid fa-clock-rotate-left me-2"></i><b>發行紀錄：</b><br>
-        <div style="margin-top:8px;">
-          2025/11/01 學號A12345678 <span style="color:#29b56a;">成功</span><br>
-          2025/10/28 學號B987654 <span style="color:#ca2222;">已撤銷</span><br>
-          2025/10/23 學號X13322132 <span style="color:#29b56a;">成功</span><br>
-        </div>
-      </div>
-      <div style="font-size:.99rem;color:#888;margin-top:1.8vw;text-align:center;">僅顯示近期發行紀錄</div>
-    `;
+    <div class="history-meta" style="text-align:left;">
+      <i class="fa-solid fa-clock-rotate-left me-2"></i><b style="font-size:1.05em;">發行紀錄：</b>
+      <ul style="margin-top:10px;list-style-type:disc;padding-left:1.4em;">
+        <li><b>2025/11/01</b>　學號A12345678　<span style="color:#29b56a;">成功</span></li>
+        <li><b>2025/10/28</b>　學號B987654　<span style="color:#ca2222;">已撤銷</span></li>
+        <li><b>2025/10/23</b>　學號X13322132　<span style="color:#29b56a;">成功</span></li>
+      </ul>
+    </div>
+    <div style="font-size:.99rem;color:#888;margin-top:1.5vw;text-align:left;padding-left:1.1em;">僅顯示近期發行記錄</div>
+  `;
+      }
+
+      function renderFaq() {
+        document.getElementById("step-content").innerHTML = `
+    <div class="faq-pop active" style="position:static;box-shadow:none;margin-bottom:0;text-align:left;">
+      <b style="font-size:1.08em;">常見問題 FAQ</b><br>
+      <ul style="margin-top:10px;list-style-type:none;padding-left:0;">
+        <li><b>驗證端用途？</b><br>查驗學生數位憑證真偽。</li>
+        <li><b>如何驗證？</b><br>校方出示QR讓學生App掃描，資料雲端自動比對，成功即顯示通過。</li>
+        <li><b>驗證失敗會怎樣？</b><br>標誌紅色並警告，撤銷憑證則有異常提醒。</li>
+        <li><b>還有其他QA？</b><br>如需更多說明，請洽校證發行處或客服詢問。</li>
+      </ul>
+      <button class="btn btn-outline-primary btn-sm w-100 mt-1" onclick="tabSwitch('issue')">返回驗證流程</button>
+    </div>`;
       }
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
