@@ -1,137 +1,595 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head>
-  <meta charset="UTF-8" />
-  <title>校園請假憑證 驗證端</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <style>
-    body { background: linear-gradient(135deg, #fffbe6 0%, #f2f9f9 100%); padding: 20px; }
-    .verify-card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 2px 24px rgba(239,201,68,0.27);
-      padding: 40px;
-      max-width: 420px;
-      margin: 30px auto;
-      text-align: center;
-    }
-    .verify-header {
-      color: #b57913;
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 20px;
-    }
-    .qrcode-section img {
-      max-width: 220px;
-      margin-bottom: 10px;
-    }
-    .btn-primary {
-      background: #b6903e;
-      border: none;
-    }
-    #polling-status {
-      font-size: 1rem;
-      color: #666;
-      margin-top: 12px;
-    }
-  </style>
-</head>
-<body>
-  <div class="verify-card shadow">
-    <div class="verify-header">校園請假憑證 驗證端</div>
-    <button id="btnGenerate" class="btn btn-primary w-100 mb-3">產生驗證QRCode</button>
-    <div id="result"></div>
-  </div>
-
-<script>
-  let pollingTimer = null;
-  let currentTransactionId = null;
-
-  document.getElementById('btnGenerate').addEventListener('click', () => {
-    fetch('/api/generate-vp-qrcode')
-      .then(res => res.json())
-      .then(result => {
-        if(result.error){
-          showError('產生QRCode失敗：' + result.error);
-          return;
+  <head>
+    <meta charset="UTF-8" />
+    <title>校園請假憑證驗證端</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+    <style>
+      body {
+        background: linear-gradient(120deg, #e7f0fe 0%, #fffbe6 100%);
+        font-family: "Noto Sans TC", sans-serif;
+        transition: 0.4s;
+      }
+      body.theme-dark {
+        background: linear-gradient(
+          120deg,
+          #191d24 0%,
+          #2f2a36 100%
+        ) !important;
+        color: #ffe082 !important;
+      }
+      .vc-card {
+        background: #fff;
+        border-radius: 1.5rem;
+        box-shadow: 0 0.8rem 2.2rem 0 #b8d2df44;
+        max-width: 440px;
+        margin: clamp(10px, 7vw, 54px) auto 38px auto;
+        padding: clamp(13px, 6vw, 38px);
+        min-height: 450px;
+        position: relative;
+        z-index: 3;
+        text-align: center;
+        transition: 0.4s;
+      }
+      body.theme-dark .vc-card {
+        background: #22282c;
+        color: #fde99c;
+      }
+      .header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.5em;
+      }
+      .header-main {
+        font-size: 2.15rem;
+        font-weight: 700;
+        color: #226b9a;
+        text-align: center;
+        letter-spacing: 3px;
+        transition: 0.4s;
+        flex: 1;
+      }
+      body.theme-dark .header-main {
+        color: #ffd600;
+      }
+      .header-sub {
+        font-size: 0.96rem;
+        color: #888;
+        text-align: center;
+        margin-bottom: 16px;
+      }
+      body.theme-dark .header-sub {
+        color: #ffe082;
+      }
+      .theme-switch input {
+        display: none;
+      }
+      .theme-switch label {
+        cursor: pointer;
+        padding: 6px 16px;
+        border-radius: 13px;
+        background: #e7f4ff;
+        border: 1.5px solid #a7daf6;
+        font-weight: 700;
+        user-select: none;
+        transition: 0.2s;
+        font-size: 0.97rem;
+        min-width: 48px;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: #226b9a;
+      }
+      body.theme-dark .theme-switch label {
+        background: #23283d;
+        color: #ffd600;
+        border-color: #ffd600;
+      }
+      .theme-icon {
+        display: inline-block;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        position: relative;
+        box-shadow: 0 1px 7px #fed 0.16;
+        border: 1.7px solid #fed600;
+        margin-right: 5px;
+        margin-left: 1px;
+        background: #fffde7;
+        overflow: hidden;
+        vertical-align: middle;
+      }
+      .theme-icon .half {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        height: 100%;
+      }
+      .theme-icon .half.left {
+        left: 0;
+        background: #343650;
+      }
+      .theme-icon .half.right {
+        right: 0;
+        background: transparent;
+      }
+      body.theme-dark .theme-icon {
+        background: #23283d;
+        border-color: #ffd600;
+      }
+      body.theme-dark .theme-icon .half.left {
+        background: transparent;
+      }
+      body.theme-dark .theme-icon .half.right {
+        background: #ffd600;
+      }
+      .tab-nav {
+        display: flex;
+        justify-content: flex-start;
+        overflow-x: auto;
+        gap: 10px;
+        font-size: 1.07rem;
+        margin-bottom: 13px;
+        flex-wrap: nowrap;
+        border-bottom: 1.5px solid #eef;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .tab-nav::-webkit-scrollbar {
+        display: none;
+      }
+      .tab-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        color: #777;
+        padding: 0.57em 1.1em;
+        border-radius: 8px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        white-space: nowrap;
+        min-width: 112px;
+        max-width: 160px;
+        transition: 0.3s;
+        font-size: 1rem;
+        margin-bottom: 0;
+        box-sizing: border-box;
+      }
+      .tab-btn i {
+        margin-right: 7px;
+      }
+      .tab-btn span {
+        display: block;
+        text-align: center;
+      }
+      .tab-btn.active,
+      .tab-btn:focus {
+        background: #e0edf8;
+        color: #226b9a;
+        border: 1.5px solid #ffc107;
+        box-shadow: 0 2px 8px #ffe9b3;
+      }
+      body.theme-dark .tab-btn.active,
+      body.theme-dark .tab-btn:focus {
+        background: #2d3244;
+        color: #ffe082;
+        border-color: #ffe082;
+      }
+      .faq-btn {
+        background: none;
+        border: none;
+        font-size: 1.33rem;
+        color: #ffc107;
+        z-index: 100;
+        position: absolute;
+        top: 13px;
+        left: 8px;
+      }
+      .stepper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 9px;
+        gap: 14px;
+      }
+      .stepper-step {
+        width: 27px;
+        height: 27px;
+        border-radius: 50%;
+        background: #e0edf8;
+        color: #226b9a;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.13rem;
+        border: 2px solid #e0edf8;
+        transition: 0.2s;
+      }
+      .stepper-step.active {
+        background: #fff;
+        border-color: #ffc107;
+        color: #b07913;
+        box-shadow: 0 2px 7px #ffe9b3;
+      }
+      body.theme-dark .stepper-step {
+        background: #35373b;
+        color: #ffe082;
+        border-color: #34343b;
+      }
+      body.theme-dark .stepper-step.active {
+        background: #22292e;
+        border-color: #ffe082;
+        color: #ffe082;
+      }
+      .stepper-line {
+        font-size: 1.1rem;
+        color: #b8d2df;
+        margin: 0 4px;
+      }
+      body.theme-dark .stepper-line {
+        color: #38373d;
+      }
+      .faq-pop.active {
+        display: block;
+      }
+      .faq-pop {
+        display: none;
+        background: #fffbe8;
+        border-radius: 12px;
+        box-shadow: 0 2px 16px #fce6aa99;
+        padding: 18px 16px;
+        font-size: 1rem;
+        z-index: 99;
+        border: 2px solid #ffe082;
+        color: #666;
+        text-align: left;
+        position: relative;
+        margin-bottom: 0;
+      }
+      body.theme-dark .faq-pop {
+        background: #2d3244;
+        color: #ffd600;
+        border-color: #ffd600;
+      }
+      .qrcode-area {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .qrcode-area img {
+        max-width: 220px;
+        min-width: 110px;
+        box-shadow: 0 2px 18px #bbd7e7;
+        border-radius: 1vw;
+        background: #f1f8fe;
+        border: 5px solid #fffde7;
+        transition: 0.3s;
+        animation: popQ 0.73s cubic-bezier(0.23, 1.25, 0.48, 0.82);
+        display: block;
+      }
+      @keyframes popQ {
+        from {
+          transform: scale(0.6) rotate(-8deg);
+          opacity: 0;
         }
-        currentTransactionId = result.transactionId;
-        showQRCode(result.qrcode, result.authUri);
-        startPolling();
-      })
-      .catch(() => {
-        showError('伺服器未回應，請稍後再試。');
-      });
-  });
-
-  function showQRCode(qrImg, authUri){
-    const html = `
-      <div class="alert alert-success">請將下方 QRCode 出示給學生使用數位皮夾 App 掃描！</div>
-      <div class="qrcode-section">
-        <img src="${qrImg}" alt="驗證 QRCode"/>
-        <div><a href="${authUri}" target="_blank">直接點此啟用數位皮夾 App (DeepLink)</a></div>
+        to {
+          transform: none;
+          opacity: 1;
+        }
+      }
+      body.theme-dark .qrcode-area img {
+        background: #3d4146;
+        border-color: #444;
+      }
+      .deep-link-btn {
+        background: #29b56a;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        padding: 9.5px 18px;
+        margin-top: 8px;
+        font-size: 1.08rem;
+        display: inline-block;
+        text-decoration: none;
+        box-shadow: 0 2px 9px #bbdad9aa;
+        transition: 0.2s;
+        text-align: center;
+      }
+      .deep-link-btn:hover {
+        background: #21894c;
+      }
+      .result-success {
+        font-size: 1.18rem;
+        background: linear-gradient(90deg, #fff3cd 10%, #e8ffd6 100%);
+        border-radius: 11px;
+        color: #b07913;
+        font-weight: 700;
+        box-shadow: 0 0 14px #f9ecc355;
+        padding: 14px 8px;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+      .history-meta {
+        background: #e7f4ff;
+        border-radius: 12px;
+        padding: 13px 8px 9px 8px;
+        color: #356;
+        font-size: 1rem;
+        margin-bottom: 8px;
+        line-height: 1.63;
+        border-left: 4px solid #ffc107;
+        text-align: left;
+        word-break: break-all;
+        margin-top: 8px;
+      }
+      body.theme-dark .history-meta {
+        background: #28292a;
+        color: #ffe082;
+        border-left: 4px solid #ffd600;
+      }
+      @media (max-width: 600px) {
+        .vc-card {
+          padding: 14px 6vw 22px 6vw;
+        }
+        .header-main {
+          font-size: 1.22rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="vc-card" id="VCApp">
+      <div class="header-row">
+        <div class="header-main">校園請假憑證</div>
+        <div class="theme-switch">
+          <input type="checkbox" id="themeToggler" />
+          <label for="themeToggler">
+            <span class="theme-icon">
+              <span class="half left"></span>
+              <span class="half right"></span>
+            </span>
+            <span id="switchText">暗</span>
+          </label>
+        </div>
       </div>
-      <div id="polling-status">等待學生送出憑證...</div>
-    `;
-    document.getElementById('result').innerHTML = html;
-  }
-
-  function showError(msg){
-    document.getElementById('result').innerHTML = `<div class="alert alert-danger">${msg}</div>`;
-  }
-
-  function startPolling(){
-    if(pollingTimer) clearInterval(pollingTimer);
-    if(!currentTransactionId) return;
-    pollingTimer = setInterval(() => {
-      fetch(`/api/poll-transaction?transactionId=${currentTransactionId}`)
-        .then(res => res.json())
-        .then(data => {
-          if(data.error){
-            document.getElementById('polling-status').innerText = '查詢錯誤：' + data.error;
-            clearInterval(pollingTimer);
-            return;
-          }
-          if(data.received){
-            // 掃描成功：移除 QR 及按鈕區，僅保留成功訊息
-            document.getElementById('result').innerHTML = `
-              <div class="alert alert-success" style="font-size:1.15rem;">
-                學生掃描並成功送出請假憑證，驗證通過！
-              </div>
-            `;
-            clearInterval(pollingTimer);
-          } else {
-            document.getElementById('polling-status').innerText = '等待學生送出憑證...';
-          }
-        })
-        .catch(() => {
-          document.getElementById('polling-status').innerText = '查詢失敗，請稍後重試。';
-          clearInterval(pollingTimer);
-        });
-    }, 3000);
-  }
-
-  // 按鈕顯示控制（只保留一次操作機會）
-  document.getElementById('btnGenerate').addEventListener('click', () => {
-    document.getElementById('btnGenerate').disabled = true; // 禁用按鈕，防止重覆產生
-    fetch('/api/generate-vp-qrcode')
-      .then(res => res.json())
-      .then(result => {
-        if(result.error){
-          showError('產生QRCode失敗：' + result.error);
-          document.getElementById('btnGenerate').disabled = false;
-          return;
-        }
-        currentTransactionId = result.transactionId;
-        showQRCode(result.qrcode, result.authUri);
-        startPolling();
-      })
-      .catch(() => {
-        showError('伺服器未回應，請稍後再試。');
-        document.getElementById('btnGenerate').disabled = false;
+      <div class="header-sub">Campus Leave Certificate - 驗證端</div>
+      <div class="tab-nav mb-2" id="tabNav">
+        <button class="tab-btn active" onclick="tabSwitch('issue')">
+          <span class="tab-inner"
+            ><i class="fa-solid fa-qrcode tab-icon"></i>驗證流程</span
+          >
+        </button>
+        <button class="tab-btn" onclick="tabSwitch('history')">
+          <span class="tab-inner"
+            ><i class="fa-solid fa-clock-rotate-left tab-icon"></i
+            >發行紀錄</span
+          >
+        </button>
+        <button class="tab-btn" onclick="tabSwitch('help')">
+          <span class="tab-inner"
+            ><i class="fa-solid fa-circle-info tab-icon"></i>說明FAQ</span
+          >
+        </button>
+      </div>
+      <div class="stepper mb-1" id="stepper-wrap">
+        <div id="step1" class="stepper-step active">1</div>
+        <div class="stepper-line">—</div>
+        <div id="step2" class="stepper-step">2</div>
+        <div class="stepper-line">—</div>
+        <div id="step3" class="stepper-step">3</div>
+      </div>
+      <div id="step-content" class="fade-in"></div>
+      <button class="faq-btn" id="faqBtn" onclick="showFaqPop()">
+        <i class="fa-solid fa-circle-question"></i>
+      </button>
+      <div class="faq-pop" id="faqPop">
+        <b>常見問題 FAQ</b><br />
+        <ul>
+          <li>驗證端用途：查驗學生數位憑證真偽</li>
+          <li>流程：校方出示QR讓學生App掃描，資料雲端自動比對</li>
+          <li>成功會顯示驗證通過，失敗則標誌紅色並警告</li>
+          <li>如憑證被撤銷，系統自動顯示異常提醒</li>
+        </ul>
+        <button
+          class="btn btn-outline-primary btn-sm w-100 mt-1"
+          onclick="hideFaqPop()"
+        >
+          關閉FAQ
+        </button>
+      </div>
+    </div>
+    <script>
+      // 主題切換
+      function applyThemeChange(isDark) {
+        document.body.classList.toggle("theme-dark", isDark);
+        document.getElementById("switchText").textContent = isDark
+          ? "亮"
+          : "暗";
+      }
+      document.getElementById("themeToggler").onchange = function (e) {
+        applyThemeChange(e.target.checked);
+      };
+      document.addEventListener("DOMContentLoaded", () => {
+        applyThemeChange(false);
+        tabSwitch("issue");
       });
-  });
 
-</script>
-</body>
+      function showFaqPop() {
+        document.getElementById("faqPop").classList.add("active");
+      }
+      function hideFaqPop() {
+        document.getElementById("faqPop").classList.remove("active");
+      }
+      let currentTab = "issue",
+        step = 1;
+      function tabSwitch(tab) {
+        currentTab = tab;
+        document.querySelectorAll(".tab-btn").forEach((btn, i) => {
+          btn.classList.toggle(
+            "active",
+            (tab === "issue" && i == 0) ||
+              (tab === "history" && i == 1) ||
+              (tab === "help" && i == 2)
+          );
+        });
+        document.getElementById("stepper-wrap").style.display =
+          tab === "issue" ? "flex" : "none";
+        document.getElementById("faqBtn").style.display =
+          tab === "help" ? "none" : "inline-block";
+        if (tab === "issue") renderFlowStep1();
+        if (tab === "history") renderHistory();
+        if (tab === "help") renderFaq();
+      }
+
+      // 驗證流程，API串接
+      function setActiveStep(idx) {
+        for (let i = 1; i <= 3; i++) {
+          document
+            .getElementById("step" + i)
+            .classList.toggle("active", i === idx);
+        }
+        step = idx;
+      }
+      let pollingTimer = null,
+        currentTransactionId = null;
+      function renderFlowStep1() {
+        setActiveStep(1);
+        document.getElementById("step-content").innerHTML = `
+        <div class="alert alert-warning mb-2">第1步【產生驗證QRCode】</div>
+        <button class="btn btn-primary w-100" id="btnGenerate">產生驗證QRCode</button>
+      `;
+        document.getElementById("btnGenerate").onclick = function () {
+          setActiveStep(2);
+          document.getElementById("step-content").innerHTML = `
+          <div class="alert alert-success">產生中...</div>
+        `;
+          fetch("/api/generate-vp-qrcode")
+            .then((res) => res.json())
+            .then((result) => {
+              if (result.error) {
+                document.getElementById(
+                  "step-content"
+                ).innerHTML = `<div class="alert alert-danger">${result.error}</div>
+                 <button class="btn btn-outline-primary w-100 mt-2" onclick="renderFlowStep1()">返回</button>`;
+                setActiveStep(1);
+                return;
+              }
+              currentTransactionId = result.transactionId;
+              renderFlowStep2(result.qrcode, result.authUri);
+              startPolling();
+            })
+            .catch(() => {
+              document.getElementById(
+                "step-content"
+              ).innerHTML = `<div class="alert alert-danger">伺服器未回應，請稍後再試。</div>
+               <button class="btn btn-outline-primary w-100 mt-2" onclick="renderFlowStep1()">返回</button>`;
+              setActiveStep(1);
+            });
+        };
+      }
+      function renderFlowStep2(qrImg, deepLink) {
+        setActiveStep(2);
+        document.getElementById("step-content").innerHTML = `
+        <div class="alert alert-success mb-2">第2步【請學生使用 App 掃描/點連結】</div>
+        <div class="qrcode-area mb-2">
+          <img src="${qrImg}" alt="驗證 QRCode" />
+          <a href="${deepLink}" class="deep-link-btn" target="_blank">
+            <i class="fa-solid fa-mobile"></i> 直接開啟App領取憑證
+          </a>
+          <div style="font-size:0.98em;color:#888;margin-top:5px;text-align:center;">（如手機沒掃到QRCode也可點上方連結）</div>
+        </div>
+        <div id="polling-status" style="font-size:1.05em;color:#666;margin-top:5px;">等待學生送出憑證...</div>
+      `;
+      }
+      function renderFlowStep3() {
+        setActiveStep(3);
+        document.getElementById(
+          "step-content"
+        ).innerHTML = `<div class="result-success mb-2">學生掃描並成功送出請假憑證，<b>驗證通過！</b></div>
+         <div style="font-size:.99em;color:#888;margin-top:7px;text-align:center;">
+           如需重複驗證請點下方重新來一次。
+         </div>
+         <button class="btn btn-outline-primary w-100 mt-2" onclick="renderFlowStep1()">重新驗證</button>
+        `;
+      }
+      function startPolling() {
+        if (pollingTimer) clearInterval(pollingTimer);
+        if (!currentTransactionId) return;
+        pollingTimer = setInterval(() => {
+          fetch(`/api/poll-transaction?transactionId=${currentTransactionId}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.error) {
+                document.getElementById("polling-status").innerText =
+                  "查詢錯誤：" + data.error;
+                clearInterval(pollingTimer);
+                return;
+              }
+              if (data.received) {
+                renderFlowStep3();
+                clearInterval(pollingTimer);
+              } else {
+                document.getElementById("polling-status").innerText =
+                  "等待學生送出憑證...";
+              }
+            })
+            .catch(() => {
+              document.getElementById("polling-status").innerText =
+                "查詢失敗，請稍後重試。";
+              clearInterval(pollingTimer);
+            });
+        }, 3000);
+      }
+      // FAQ / 發行紀錄
+      function renderFaq() {
+        document.getElementById("step-content").innerHTML = `
+      <div class="faq-pop active" style="position:static;box-shadow:none;margin-bottom:0;">
+        <b>常見問題 FAQ</b><br>
+        <ul>
+          <li>驗證端用途：查驗學生數位憑證真偽</li>
+          <li>流程：校方出示QR讓學生App掃描，資料雲端自動比對</li>
+          <li>成功會顯示驗證通過，失敗則標誌紅色並警告</li>
+          <li>如憑證被撤銷，系統自動顯示異常提醒</li>
+        </ul>
+        <button class="btn btn-outline-primary btn-sm w-100 mt-1" onclick="tabSwitch('issue')">返回驗證流程</button>
+      </div>`;
+      }
+      function renderHistory() {
+        document.getElementById("step-content").innerHTML = `
+      <div class="history-meta">
+        <i class="fa-solid fa-clock-rotate-left me-2"></i><b>發行紀錄：</b><br>
+        <div style="margin-top:8px;">
+          2025/11/01 學號A12345678 <span style="color:#29b56a;">成功</span><br>
+          2025/10/28 學號B987654 <span style="color:#ca2222;">已撤銷</span><br>
+          2025/10/23 學號X13322132 <span style="color:#29b56a;">成功</span><br>
+        </div>
+      </div>
+      <div style="font-size:.99rem;color:#888;margin-top:1.8vw;text-align:center;">僅顯示近期發行紀錄</div>
+    `;
+      }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+  </body>
 </html>
